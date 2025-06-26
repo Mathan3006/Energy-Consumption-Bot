@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sparky</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --warning: #f72585;
+            --gray: #adb5bd;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--dark);
+        }
+
+        .app-container {
+            width: 900px;
+            height: 700px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            display: flex;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: linear-gradient(180deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .logo i {
+            font-size: 28px;
+            margin-right: 12px;
+            color: var(--success);
+        }
+
+        .logo h1 {
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .input-progress {
+            margin: 30px 0;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            opacity: 0.6;
+            transition: all 0.3s;
+        }
+
+        .progress-step.active {
+            opacity: 1;
+        }
+
+        .progress-step.completed {
+            opacity: 0.8;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .active .step-number {
+            background: var(--accent);
+        }
+
+        .completed .step-number {
+            background: var(--success);
+        }
+
+        .step-label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .step-unit {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 3px;
+        }
+
+        .cost-summary {
+            margin-top: auto;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .cost-summary.visible {
+            display: block;
+        }
+
+        .cost-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+
+        .cost-title i {
+            margin-right: 8px;
+            color: var(--success);
+        }
+
+        .cost-value {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .cost-details {
+            font-size: 12px;
+            opacity: 0.8;
+            line-height: 1.5;
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .chat-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary);
+        }
+
+        .chat-status {
+            background: var(--light);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+
+        .chat-status i {
+            margin-right: 5px;
+            font-size: 10px;
+            color: var(--success);
+        }
+
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            max-width: 80%;
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            line-height: 1.5;
+            font-size: 14px;
+            animation: fadeIn 0.3s ease-out forwards;
+            opacity: 0;
+            position: relative;
+        }
+
+        .user-message {
+            background: var(--primary);
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message {
+            background: var(--light);
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .input-area {
+            display: flex;
+            background: var(--light);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .input-area input {
+            flex: 1;
+            border: none;
+            background: transparent;
+            padding: 12px 15px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .input-area button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 50px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-area button:hover {
+            background: var(--secondary);
+        }
+
+        .input-area button i {
+            font-size: 18px;
+        }
+
+        .chart-container {
+            height: 200px;
+            margin-top: 20px;
+            padding: 10px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.05);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="logo">
+                <i class="fas fa-bolt"></i>
+                <h1>Sparky </h1>
+            </div>
+
+            <div class="input-progress" id="progress-steps">
+                <div class="progress-step active" data-step="0">
+                    <div class="step-number">1</div>
+                    <div>
+                        <div class="step-label">Global Reactive Power</div>
+                        <div class="step-unit">kW</div>
+                    </div>
+                </div>
+                <div class="progress-step" data-step="1">
+                    <div class="step-number">2</div>
+                    <div>
+                        <div class="step-label">Global Intensity</div>
+                        <div class="step-unit">A</div>
+                    </div>
+                </div>
+                <div class="progress-step" data-step="2">
+                    <div class="step-number">3</div>
+                    <div>
+                        <div class="step-label">Voltage</div>
+                        <div class="step-unit">V</div>
+                    </div>
+                </div>
+                <div class="progress-step" data-step="3">
+                    <div class="step-number">4</div>
+                    <div>
+                        <div class="step-label">Sub Metering 1</div>
+                        <div class="step-unit">Wh</div>
+                    </div>
+                </div>
+                <div class="progress-step" data-step="4">
+                    <div class="step-number">5</div>
+                    <div>
+                        <div class="step-label">Sub Metering 2</div>
+                        <div class="step-unit">Wh</div>
+                    </div>
+                </div>
+                <div class="progress-step" data-step="5">
+                    <div class="step-number">6</div>
+                    <div>
+                        <div class="step-label">Sub Metering 3</div>
+                        <div class="step-unit">Wh</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cost-summary" id="cost-summary">
+                <div class="cost-title">
+                    <i class="fas fa-rupee-sign"></i>
+                    Estimated Cost
+                </div>
+                <div class="cost-value" id="cost-value">Rs. 0.00</div>
+                <div class="cost-details" id="cost-details">
+                    Rate: Rs. 11.80 per unit<br>
+                    Consumption: 0 kW
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="chat-title">Energy Prediction Assistant</div>
+                    <div class="chat-status">
+                        <i class="fas fa-circle"></i>
+                        <span>Collecting inputs</span>
+                    </div>
+                </div>
+
+                <div class="chat-box" id="chat-box">
+                    <div class="message bot-message">
+                        Welcome to ⚡Sparky⚡- Energy Predictor Bot!<br><br>
+                        I'll help you estimate electricity consumption and costs.<br>
+                        Let's start with the first parameter:<br><br>
+                        Please enter <b>Global Reactive Power</b> (in kW):
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <input type="text" id="user-input" placeholder="Enter value..." onkeypress="checkEnter(event)">
+                    <button onclick="sendMessage()">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="resultChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+        let inputData = {};
+        let currentStep = 0;
+        const inputSteps = [
+            { name: "Global_reactive_power", label: "Global Reactive Power", unit: "kW" },
+            { name: "Global_intensity", label: "Global Intensity", unit: "A" },
+            { name: "Voltage", label: "Voltage", unit: "V" },
+            { name: "Sub_metering_1", label: "Sub Metering 1", unit: "Wh" },
+            { name: "Sub_metering_2", label: "Sub Metering 2", unit: "Wh" },
+            { name: "Sub_metering_3", label: "Sub Metering 3", unit: "Wh" }
+        ];
+
+        // Initialize progress steps
+        function updateProgressSteps() {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach((step, index) => {
+                step.classList.remove('active', 'completed');
+                if (index === currentStep) {
+                    step.classList.add('active');
+                } else if (index < currentStep) {
+                    step.classList.add('completed');
+                }
+            });
+        }
+
+        // Function to handle 'Enter' key to send message
+        function checkEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function sendMessage() {
+            const inputBox = document.getElementById('user-input');
+            const msg = inputBox.value.trim();
+            if (!msg) return;
+            
+            // Add user message
+            addMessage('user', msg);
+            inputBox.value = '';
+            
+            // Store the input
+            if (currentStep < inputSteps.length) {
+                const currentInput = inputSteps[currentStep];
+                inputData[currentInput.name] = parseFloat(msg);
+                
+                // Move to next step or make prediction
+                currentStep++;
+                updateProgressSteps();
+                
+                if (currentStep < inputSteps.length) {
+                    const nextInput = inputSteps[currentStep];
+                    addMessage('bot', `Thank you! Now please enter <b>${nextInput.label}</b> (in ${nextInput.unit}):`);
+                    
+                    // Update status
+                    document.querySelector('.chat-status span').textContent = `Step ${currentStep + 1} of ${inputSteps.length}`;
+                } else {
+                    // All inputs collected, make prediction
+                    makePrediction();
+                }
+            }
+        }
+
+        function makePrediction() {
+            addMessage('bot', "Got all inputs! Calculating prediction... <i class='fas fa-cog fa-spin'></i>");
+            document.querySelector('.chat-status span').textContent = "Calculating...";
+            
+            // Simulate API call delay
+            setTimeout(() => {
+                // Simulate prediction (replace with actual API call)
+                const simulatedPrediction = simulatePrediction(inputData);
+                
+                // Display results
+                displayResults(inputData, simulatedPrediction);
+                
+                // Update status
+                document.querySelector('.chat-status span').textContent = "Prediction complete";
+            }, 2000);
+        }
+
+        function simulatePrediction(inputs) {
+            // This is a simplified simulation - replace with actual prediction logic
+            const values = Object.values(inputs);
+            const sum = values.reduce((a, b) => a + b, 0);
+            const avg = sum / values.length;
+            return avg * 0.8; // Just a dummy calculation
+        }
+
+        function displayResults(inputs, prediction) {
+            // Format the inputs for display
+            const inputLabels = inputSteps.map(step => step.label);
+            const inputValues = inputSteps.map(step => inputs[step.name]);
+            
+            // Show prediction result
+            addMessage('bot', `Prediction complete! ⚡<br><br>
+                The estimated power consumption is <b>${prediction.toFixed(2)} kW</b>.<br>
+                <small>See the chart below for details.</small>`);
+            
+            // Show chart
+            renderChart(inputLabels, inputValues, prediction);
+            
+            // Calculate and display cost
+            const cost = prediction * 11.80;
+            document.getElementById('cost-value').textContent = `Rs. ${cost.toFixed(2)}`;
+            document.getElementById('cost-details').innerHTML = `
+                Rate: Rs. 11.80 per unit<br>
+                Consumption: ${prediction.toFixed(2)} kW
+            `;
+            document.getElementById('cost-summary').classList.add('visible');
+            
+            // Reset for new prediction
+            currentStep = 0;
+            inputData = {};
+            updateProgressSteps();
+            
+            setTimeout(() => {
+                addMessage('bot', 'Would you like to make another prediction?<br>Enter <b>Global Reactive Power</b> (in kW) to start again:');
+                document.querySelector('.chat-status span').textContent = "Ready for new prediction";
+            }, 1000);
+        }
+
+        function addMessage(sender, text) {
+            const box = document.getElementById('chat-box');
+            const msg = document.createElement('div');
+            msg.className = `message ${sender}-message`;
+            msg.innerHTML = text;
+            box.appendChild(msg);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function renderChart(labels, values, prediction) {
+            const ctx = document.getElementById('resultChart').getContext('2d');
+
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [...labels, 'Predicted Power'],
+                    datasets: [{
+                        label: 'Values',
+                        backgroundColor: [
+                            '#4361ee', '#3f37c9', '#4895ef', 
+                            '#4cc9f0', '#f72585', '#7209b7',
+                            '#3a0ca3'
+                        ],
+                        data: [...values, prediction],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        title: {
+                            display: true,
+                            text: 'Energy Consumption Analysis',
+                            font: { size: 14, weight: '600' },
+                            color: '#212529'
+                        },
+                        tooltip: {
+                            backgroundColor: '#212529',
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 12 },
+                            padding: 10,
+                            displayColors: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            },
+                            ticks: {
+                                font: { size: 11 }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        // Initialize
+        updateProgressSteps();
+    </script>
+</body>
+</html>
